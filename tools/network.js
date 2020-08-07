@@ -8,7 +8,7 @@ const { ChainID, ChainType } = require("@harmony-js/utils");
 module.exports = class Network {
   constructor(network) {
     this.hmy = null;
-    this.privateKeys = {deployer: null, tester: null};
+    this.privateKey = null;
     this.setNetwork(network);
     this.gasPrice = process.env.GAS_PRICE;
     this.gasLimit = process.env.GAS_LIMIT;
@@ -16,39 +16,37 @@ module.exports = class Network {
 
   setNetwork(network) {
     this.network = network.toLowerCase();
-    var url, chainType, chainId;
 
     switch (this.network) {
       case 'testnet':
         console.log('Using the testnet network...\n');
-        url = "https://api.s0.b.hmny.io";
-        chainType = ChainType.Harmony;
-        chainId = ChainID.HmyTestnet;
+        this.hmy = new Harmony(
+          // let's assume we deploy smart contract to this end-point URL
+          "https://api.s0.b.hmny.io",
+          {
+            chainType: ChainType.Harmony,
+            chainId: ChainID.HmyTestnet,
+          }
+        );
+        this.privateKey = process.env[`${this.network.toUpperCase()}_PRIVATE_KEY`];
         break;
       
       case 'mainnet':
         console.log('Using the mainnet network...\n');
-        url = "https://api.s0.t.hmny.io";
-        chainType = ChainType.Harmony;
-        chainId = ChainID.HmyMainnet;
+        this.hmy = new Harmony(
+          // let's assume we deploy smart contract to this end-point URL
+          "https://api.s0.t.hmny.io",
+          {
+            chainType: ChainType.Harmony,
+            chainId: ChainID.HmyMainnet,
+          }
+        );
+        this.privateKey = process.env[`${this.network.toUpperCase()}_PRIVATE_KEY`];
         break;
       
       default:
         console.log('Please enter a valid network - testnet or mainnet.');
         throw new Error('NetworkRequired');
-      }
-
-      this.hmy = new Harmony(
-        url,
-        {
-          chainType: chainType,
-          chainId: chainId,
-        }
-      );
-
-      this.privateKeys = {
-        deployer: process.env[`${this.network.toUpperCase()}_PRIVATE_KEY`],
-        tester: process.env[`${this.network.toUpperCase()}_TEST_ACCOUNT_PRIVATE_KEY`],
       }
   }
 
@@ -59,10 +57,10 @@ module.exports = class Network {
     }
   }
 
-  loadContract(path, address, privateKeyType) {
+  loadContract(path, address) {
     const contractJson = require(path);
     const contract = this.hmy.contracts.createContract(contractJson.abi, address);
-    contract.wallet.addByPrivateKey(this.privateKeys[privateKeyType]);
+    contract.wallet.addByPrivateKey(this.privateKey);
     return contract;
   }
 
